@@ -10,6 +10,7 @@ namespace Console;
 
 
 use GuzzleHttp\Client;
+use Symfony\Component\Cache\Simple\FilesystemCache;
 use Symfony\Component\DomCrawler\Crawler;
 
 class Parser
@@ -18,14 +19,20 @@ class Parser
     const SARNA_NET_URL = 'http://www.sarna.net';
     const PLANET_CATEGORY_URL = 'http://www.sarna.net/wiki/Category:Planets?from=';
 
+    const CACHE_KEYS_CATEGORY = 'letter_';
+    const CACHE_KEYS_PLANET_URL = 'planet_';
+
     /**
      * @var string
      */
     private $planetName;
 
+    private $cache;
+
     public function __construct(string $planetName)
     {
         $this->planetName = $planetName;
+        $this->cache = new FilesystemCache('', 3600, 'cache');
     }
 
     /**
@@ -39,10 +46,24 @@ class Parser
 
         $firstPlanetLetter = mb_substr(mb_strtoupper($this->planetName), 0, 1);
 
-        $response = $client->request('GET', self::PLANET_CATEGORY_URL . $firstPlanetLetter);
+        $content = "";
 
-        if ( $response->getStatusCode() == 200 ) {
-            $crawler = new Crawler((string) $response->getBody());
+        if ( $this->cache->has(self::CACHE_KEYS_CATEGORY . $firstPlanetLetter) ) {
+            $content = $this->cache->get(self::CACHE_KEYS_CATEGORY . $firstPlanetLetter);
+        } else {
+            $response = $client->request('GET', self::PLANET_CATEGORY_URL . $firstPlanetLetter);
+
+            if ( $response->getStatusCode() == 200 ) {
+                $content = (string) $response->getBody();
+
+                $this->cache->set(self::CACHE_KEYS_CATEGORY . $firstPlanetLetter, $content);
+            } else {
+                throw new \Exception('Planet Name not Found');
+            }
+        }
+
+        if ( $content != "" ) {
+            $crawler = new Crawler($content);
 
             $planetsList = $crawler->filter('body .mw-category-group a');
             foreach ( $planetsList as $node ) {
@@ -50,9 +71,9 @@ class Parser
                     return $node->getAttribute('href');
                 }
             }
+        } else {
+            throw new \Exception('Planet Name not Found');
         }
-
-        throw new \Exception('Planet Name not Found');
 
 
     }
@@ -72,9 +93,11 @@ class Parser
             // We need several information from this page
             // first let's get the planetary info full data so
             $planetaryInfo = $crawler->filter('body h2')->filter('#Planetary_History');
-            foreach ( $planetaryInfo as $node ) {
-                var_dump($node->textContent);
-            }
+            var_dump($planetaryInfo);
+//            foreach ( $planetaryInfo as $node ) {
+//                var_dump($node->parentNode()->textContent);
+////                var_dump($node->textContent);
+//            }
 //            var_dump($planetaryInfo);
 //            ->siblings()
 //                ->each(function (Crawler $node, $i) {

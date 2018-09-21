@@ -7,3 +7,10 @@ Still very WIP, just testing to see if I can help this guys out: https://www.red
  Based on symfony components:
  - DomCrawler
  - Console Commands
+ 
+ 
+ # How to run
+ 
+ Just call:
+ 
+ `php console.php app:parse-planet-info -p planet-name -p other-planet-name`
