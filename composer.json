@@ -13,5 +13,8 @@
             "Console\\": "src"
         },
         "classmap": ["src"]
+    },
+    "require-dev": {
+        "symfony/var-dumper": "^4.1"
     }
 }
